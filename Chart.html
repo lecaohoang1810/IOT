@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo MQTT</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .chart-container {
+            width: 80%;
+            height: 400px;
+            margin: 20px auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        #alert {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        h1, p {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Giám sát nhịp tim, Oxi, nhiệt độ cơ thể</h1>
+    <p id="tinnhan">ESP8266_nhiptim: ... </p>
+    <div id="alert"></div>
+
+    <div class="chart-container">
+        <h2>Nhiệt độ</h2>
+        <canvas id="temperature-chart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Nhịp tim</h2>
+        <canvas id="heart-rate-chart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Oxy</h2>
+        <canvas id="oxygen-chart"></canvas>
+    </div>
+
+    <script type="text/javascript">
+        var espData = {};
+        var temperatureData = [];
+        var heartRateData = [];
+        var oxygenData = [];
+        var timeData = [];
+
+        var interval = 5 * 1000; // 30 giây
+        var lastTimestamp = 0;
+
+        function makeid() {
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+            for (var i = 0; i < 5; i++)
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+            return text;
+        }
+
+        var client = new Paho.MQTT.Client("test.mosquitto.org", 8080, makeid());
+
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        var options = {
+            useSSL: false,
+            userName: "",
+            password: "",
+            onSuccess: onConnect,
+            onFailure: doFail
+        };
+
+        createChart("temperature-chart", "Nhiệt độ", 'rgba(76, 175, 80, 0.2)', '#4caf50', 0, 50);
+        createChart("heart-rate-chart", "Nhịp tim", 'rgba(244, 67, 54, 0.2)', '#f44336', 0, 300);
+        createChart("oxygen-chart", "Oxy", 'rgba(33, 150, 243, 0.2)', '#2196f3', 0, 100);
+
+        client.connect(options);
+
+        function doFail(e) {
+            console.log(e);
+        }
+
+        function onConnect() {
+            console.log("Connect OK");
+            client.subscribe("ESP8266_nhietdo");
+            client.subscribe("ESP8266_nhiptim");
+            client.subscribe("ESP8266_Oxi");
+        }
+
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log(responseObject.errorMessage);
+            }
+        }
+
+        function onMessageArrived(message) {
+            console.log(message.destinationName + ":" + message.payloadString);
+
+            espData[message.destinationName] = message.payloadString;
+
+            var currentTimestamp = new Date().getTime();
+
+            // Kiểm tra nếu đã đủ thời gian để lưu giá trị mới
+            if (currentTimestamp - lastTimestamp >= interval) {
+                temperatureData.push(parseFloat(espData["ESP8266_nhietdo"]));
+                heartRateData.push(parseInt(espData["ESP8266_nhiptim"]));
+                oxygenData.push(parseInt(espData["ESP8266_Oxi"]));
+                timeData.push(new Date().toLocaleTimeString());
+
+                lastTimestamp = currentTimestamp;
+
+                updateChartData();
+                checkAlerts(espData);
+            }
+
+            document.getElementById("tinnhan").innerHTML = `${message.destinationName}: ${message.payloadString}`;
+        }
+
+        function checkAlerts(data) {
+            var temperatureThreshold = 7.5;
+
+            if (parseFloat(data["ESP8266_nhietdo"]) > temperatureThreshold) {
+                showAlert("Nhiệt độ cơ thể cao!");
+            }
+        }
+
+        function showAlert(message) {
+            var alertDiv = document.getElementById("alert");
+            alertDiv.innerHTML = `<p>${message}</p>`;
+        }
+
+        function createChart(id, label, backgroundColor, borderColor, yAxisMin, yAxisMax) {
+            var ctx = document.getElementById(id).getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: borderColor,
+                        backgroundColor: backgroundColor,
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: [{
+                            type: 'linear',
+                            position: 'bottom'
+                        }],
+                        y: [{
+                            type: 'linear',
+                            position: 'left',
+                            ticks: {
+                                min: yAxisMin,
+                                max: yAxisMax,
+                                stepSize: 10  // Khoảng cách giữa các giá trị trục y
+                            }
+                        }]
+                    }
+                }
+            });
+        }
+
+        function updateChartData() {
+            updateChart("temperature-chart", timeData, temperatureData);
+            updateChart("heart-rate-chart", timeData, heartRateData);
+            updateChart("oxygen-chart", timeData, oxygenData);
+        }
+
+        function updateChart(chartId, labels, data) {
+            var chart = Chart.getChart(chartId);
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
+    </script>
+</body>
+
+</html>

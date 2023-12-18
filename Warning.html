@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waring</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 330px;
+            height: auto;
+            margin: 0 auto;
+            margin-top: 70px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #tinnhan {
+            text-align: center;
+            color: #555;
+        }
+
+        .data {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .icon {
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        .icon svg {
+            width: 30px;
+            height: 30px;
+            fill: #F29C21;
+        }
+
+        .text {
+            display: inline-block;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .reading {
+            display: block;
+            font-size: 24px;
+            color: #FF0000;
+            margin-top: 10px;
+        }
+
+        .superscript {
+            font-size: 14px;
+            vertical-align: super;
+        }
+
+        .alert {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            transition: background-color 0.5s ease;
+        }
+
+        .alert.blink {
+            animation: blinker 1s linear infinite;
+        }
+
+        @keyframes blinker {
+            50% {
+                background-color: #FF0000;
+                color: #fff;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Waring</h1>
+        <p id="tinnhan"> </p>
+        <div class="data bodytemperature">
+            <div class="icon">
+                <svg enable-background="new 0 0 19.438 54.003" height="54.003px" id="Layer_1" version="1.1"
+                    viewBox="0 0 19.438 54.003" width="19.438px" x="0px" xml:space="preserve"
+                    xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" y="0px">
+                    <g>
+                        <path
+                            d="M11.976,8.82v-2h4.084V6.063C16.06,2.715,13.345,0,9.996,0H9.313C5.965,0,3.252,2.715,3.252,6.063v30.982 C1.261,38.825,0,41.403,0,44.286c0,5.367,4.351,9.718,9.719,9.718c5.368,0,9.719-4.351,9.719-9.718 c0-2.943-1.312-5.574-3.378-7.355V18.436h-3.914v-2h3.914v-2.808h-4.084v-2h4.084V8.82H11.976z M15.302,44.833 c0,3.083-2.5,5.583-5.583,5.583s-5.583-2.5-5.583-5.583c0-2.279,1.368-4.236,3.326-5.104V24.257C7.462,23.01,8.472,22,9.719,22 s2.257,1.01,2.257,2.257V39.73C13.934,40.597,15.302,42.554,15.302,44.833z" fill="#F29C21" />
+                    </g>
+                </svg>
+            </div>
+            <div class="text">Body Temperature</div>
+            <div class="reading" id="bodyTemperatureReading">...</div>
+            <div class="alert" id="alert"></div>
+        </div>
+
+        <div class="data Heartrate">
+            <div class="icon">
+                <svg enable-background='new 0 0 40.542 40.64' height='49.079px' id='Layer_1' version='1.1' viewBox='0 0 49.079 49.079' width='49.079px' x='0px' xml:space='preserve' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' y='0px'>
+                    <path d='M35.811,2.632c0.694,0,1.433,0.039,2.223,0.113C42.84,3.218,48.4,7.62,49.079,16.054v2.807 c-0.542,6.923-5.099,15.231-17.612,25.333c-3.722,3.004-10.135,3.004-13.856,0C5.097,34.092,0.541,25.784,0,18.861v-2.807 C0.676,7.62,6.236,3.218,11.046,2.745c0.79-0.074,1.528-0.113,2.222-0.113c2.682,0,4.691,0.561,6.395,1.549 c3.181,1.846,6.569,1.846,9.752,0C31.119,3.193,33.128,2.632,35.811,2.632Z' fill='#FF0000' />
+                </svg>
+            </div>
+            <div class="text">Heart Rate(BPM)</div>
+            <div class="reading" id="heartRateReading">...</div>
+            <div class="alert" id="alert1"></div>
+        </div>
+
+        <div class="data BloodOxygen">
+            <div class="icon">
+                <svg enable-background='new 0 0 40.542 40.541' height='40.541px' id='Layer_1' version='1.1' viewBox='0 0 40.542 40.541' width='40.542px' x='0px' xml:space='preserve' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' y='0px'>
+                    <g>
+                        <path d='M16.458,0C14.618,0,0,17.95,0,26.022C0,34.096,6.544,40.64,14.618,40.64s14.617-6.544,14.617-14.617 C29.235,17.95,14.618,0,14.618,0z M13.667,37.135c-5.604,0-10.162-4.56-10.162-10.162c0-0.787,0.638-1.426,1.426-1.426 c0.787,0,1.425,0.639,1.425,1.426c0,4.031,3.28,7.312,7.311,7.312c0.787,0,1.425,0.638,1.425,1.425 C15.093,36.497,14.455,37.135,13.667,37.135z' fill='#FF0000' />
+                    </g>
+                </svg>
+            </div>
+            <div class="text">Blood Oxygen</div>
+            <div class="reading" id="bloodOxygenReading">...</div>
+            <div class="alert" id="alert2"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript" language="javascript">
+        var max, at_OK;
+        var espData = {}; // Dữ liệu từ các esp8266
+
+        var temperatureAlarm = false;
+        var heartRateAlarm = false;
+        var oxygenAlarm = false;
+        var alarmSound = new Audio('canhb.mp3');
+        var highTemperatureThreshold = 37.5; // Điều chỉnh ngưỡng nhiệt độ cao
+        var lowTemperatureThreshold = 35.5;  // Điều chỉnh ngưỡng nhiệt độ thấp
+        var highHeartRateThreshold = 100; // Điều chỉnh ngưỡng nhiệt độ cao
+        var lowHeartRateThreshold = 60; 
+        var highOxygenThreshold = 100; // Điều chỉnh ngưỡng nhiệt độ cao
+        var lowOxygenThreshold = 80; 
+
+        function makeid() {
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+            for (var i = 0; i < 5; i++)
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+            return text;
+        }
+
+        // Create a client instance
+        var client = new Paho.MQTT.Client("test.mosquitto.org", 8080, makeid());
+
+        // set callback handlers
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        var options = {
+            useSSL: false,
+            userName: "",
+            password: "",
+            onSuccess: onConnect,
+            onFailure: doFail
+        };
+
+        console.log("Connect to broker.hivemq.com:8000");
+        // connect the client
+        client.connect(options);
+
+        function doFail(e) {
+            console.log(e);
+        }
+
+        function onConnect() //sự kiện kết nối thành công
+        {
+            console.log("Connect OK");
+            client.subscribe("ESP8266_nhietdo"); // đăng ký kênh 
+            client.subscribe("ESP8266_nhiptim"); // đăng ký kênh 
+            client.subscribe("ESP8266_Oxi"); // đăng ký kênh 
+        }
+
+        // called when the client loses its connection
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log(responseObject.errorMessage);
+            }
+        }
+
+        function checkAndAlertAlarm() {
+            if (parseFloat(espData["ESP8266_nhietdo"]) > highTemperatureThreshold) {
+                temperatureAlarm = true;
+                showAlert("Nhiệt độ đang ở mức cao!", "alert");
+            } else if (parseFloat(espData["ESP8266_nhietdo"]) < lowTemperatureThreshold) {
+                temperatureAlarm = true;
+                showAlert("Nhiệt độ đang ở mức thấp!", "alert");
+            } else {
+                temperatureAlarm = false;
+                clearAlert("alert");
+            }
+
+            if (parseFloat(espData["ESP8266_nhiptim"]) >  highHeartRateThreshold) {
+                heartRateAlarm = true;
+                showAlert("Nhịp tim đang ở mức cao!", "alert1");
+            } else if (parseFloat(espData["ESP8266_nhiptim"]) < lowHeartRateThreshold) {
+                heartRateAlarm = true;
+                showAlert("Nhịp tim đang ở mức thấp!", "alert1");
+            } else {
+                heartRateAlarm = false;
+                clearAlert("alert1");
+            }
+            // Tương tự cho các giá trị khác: ESP8266_nhiptim và ESP8266_Oxi
+
+           
+            if (parseFloat(espData["ESP8266_Oxi"]) > highOxygenThreshold) {
+                oxygenAlarm = true;
+                showAlert("Nồng độ Oxy đang ở mức cao!", "alert2");
+            } else if (parseFloat(espData["ESP8266_Oxi"]) < lowOxygenThreshold) {
+                oxygenAlarm = true;
+                showAlert("Nồng độ Oxy đang ở mức thấp!", "alert2");
+            } else {
+                oxygenAlarm = false;
+                clearAlert("alert2");
+            }
+            if (temperatureAlarm || heartRateAlarm || oxygenAlarm) {
+                alarmSound.play(); // Kích hoạt âm thanh chuông cảnh báo
+            }
+        }
+
+        function showAlert(message, alertId) {
+            const alertElement = document.getElementById(alertId);
+            alertElement.innerHTML = message;
+            alertElement.classList.add('alert', 'blink');
+        }
+
+        function clearAlert(alertId) {
+            const alertElement = document.getElementById(alertId);
+            alertElement.innerHTML = "";
+            alertElement.classList.remove('blink');
+        }
+
+        // called when a message arrives
+        function onMessageArrived(message) {
+            console.log(message.destinationName + ":" + message.payloadString);
+
+            // Lưu trữ dữ liệu từ từng esp8266
+            espData[message.destinationName] = message.payloadString;
+
+            // Hiển thị dữ liệu từ tất cả esp8266
+            var displayText = "";
+            for (var esp in espData) {
+                displayText += `${esp}: ${espData[esp]}<br>`;
+            }
+
+            // document.getElementById("tinnhan").innerHTML = displayText;
+
+            // Cập nhật dữ liệu vào giao diện
+            if (message.destinationName === "ESP8266_nhietdo") {
+                document.getElementById("bodyTemperatureReading").innerHTML = espData[message.destinationName];
+            } else if (message.destinationName === "ESP8266_nhiptim") {
+                document.getElementById("heartRateReading").innerHTML = espData[message.destinationName];
+            } else if (message.destinationName === "ESP8266_Oxi") {
+                document.getElementById("bloodOxygenReading").innerHTML = espData[message.destinationName];
+            }
+            checkAndAlertAlarm();
+        }
+
+        function publish(topic, data) {
+            message = new Paho.MQTT.Message(data);
+            message.destinationName = topic;
+            client.send(message);
+        }
+    </script>
+</body>
+
+</html>
